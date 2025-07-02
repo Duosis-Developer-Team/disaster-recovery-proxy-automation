@@ -1,0 +1,43 @@
+---
+- name: Primary Proxy Erişilebilirlik Kontrolü
+  hosts: ansible_worker
+  gather_facts: no
+  vars:
+    zabbix_url: "http://10.134.16.210/zabbix/api_jsonrpc.php"
+    zabbix_user: "Admin"
+    zabbix_password: "zabbix"
+    proxy_name: "zabbix-demo-proxy-1"
+    proxy_ip: "10.134.16.80"
+    check_script_path: "/data/projects/disaster-recovery-proxy-automation/scripts/check_proxy_status.py"
+  tasks:
+    - name: Zabbix API ile proxy kontrolü yap
+      ansible.builtin.command: >
+        python3 {{ check_script_path }}
+        {{ zabbix_url }} {{ zabbix_user }} {{ zabbix_password }} {{ proxy_name }}
+      register: zabbix_check
+      ignore_errors: yes
+
+    - name: Zabbix API kontrolü başarılıysa sonucu success olarak ayarla
+      set_fact:
+        proxy_check_result: "success"
+      when: zabbix_check.rc == 0
+
+    - name: Zabbix API başarısızsa ping ile proxy kontrolü yap
+      ansible.builtin.command: ping -c 1 {{ proxy_ip }}
+      register: ping_result
+      when: zabbix_check.rc != 0
+      ignore_errors: yes
+
+    - name: Ping başarılıysa sonucu success olarak ayarla
+      set_fact:
+        proxy_check_result: "success"
+      when: zabbix_check.rc != 0 and ping_result is defined and ping_result.rc == 0
+
+    - name: Her iki kontrol de başarısızsa sonucu failure olarak ayarla
+      set_fact:
+        proxy_check_result: "failure"
+      when: (zabbix_check.rc != 0) and (ping_result is not defined or ping_result.rc != 0)
+
+    - name: Sonucu ekrana yazdır
+      debug:
+        msg: "Proxy kontrol sonucu: {{ proxy_check_result }}" 
