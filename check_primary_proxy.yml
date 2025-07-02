@@ -6,28 +6,15 @@
     zabbix_url: "{{ zabbix_url }}"
     zabbix_user: "{{ zabbix_user }}"
     zabbix_password: "{{ zabbix_password }}"
-    primary_proxy_host: "{{ primary_proxy_host }}"
-    dr_proxy_host: "{{ dr_proxy_host }}"
+    primary_proxy_ip: "{{ primary_proxy_ip }}"
+    dr_proxy_ip: "{{ dr_proxy_ip }}"
     check_script_path: "/data/projects/disaster-recovery-proxy-automation/scripts/check_proxy_status.py"
   tasks:
-    - name: Envanterden primary proxy host variable'larını al
-      set_fact:
-        primary_proxy_vars: "{{ hostvars[primary_proxy_host] }}"
-
-    - name: Zabbix API ile primary proxy kontrolü yap
+    - name: Zabbix API ile primary proxy kontrolü yap (IP ile)
       ansible.builtin.command: >
         python3 {{ check_script_path }}
-        {{ zabbix_url }} {{ zabbix_user }} {{ zabbix_password }} {{ primary_proxy_host }}
+        {{ zabbix_url }} {{ zabbix_user }} {{ zabbix_password }} {{ primary_proxy_ip }}
       register: zabbix_check
-      delegate_to: "{{ primary_proxy_vars.ansible_host }}"
-      become: yes
-      become_user: "{{ primary_proxy_vars.ansible_user | default('root') }}"
-      vars:
-        ansible_ssh_user: "{{ primary_proxy_vars.ansible_user | default('root') }}"
-        ansible_ssh_pass: "{{ primary_proxy_vars.ansible_password | default('') }}"
-        ansible_become: "{{ primary_proxy_vars.ansible_become | default(false) }}"
-        ansible_become_method: "{{ primary_proxy_vars.ansible_become_method | default('sudo') }}"
-        ansible_connection: "{{ primary_proxy_vars.ansible_connection | default('ssh') }}"
       ignore_errors: yes
 
     - name: Zabbix API kontrolü başarılıysa sonucu success olarak ayarla
@@ -36,7 +23,7 @@
       when: zabbix_check.rc == 0
 
     - name: Zabbix API başarısızsa ping ile primary proxy kontrolü yap
-      ansible.builtin.command: ping -c 1 {{ primary_proxy_vars.ansible_host }}
+      ansible.builtin.command: ping -c 1 {{ primary_proxy_ip }}
       register: ping_result
       when: zabbix_check.rc != 0
       ignore_errors: yes

@@ -10,13 +10,13 @@ def zabbix_api_request(url, payload):
     return response.json()
 
 if len(sys.argv) < 5:
-    print("Kullanım: python check_proxy_status.py <zabbix_url> <zabbix_user> <zabbix_password> <proxy_name>")
+    print("Kullanım: python check_proxy_status.py <zabbix_url> <zabbix_user> <zabbix_password> <proxy_ip>")
     sys.exit(1)
 
 zabbix_url = sys.argv[1]
 zabbix_user = sys.argv[2]
 zabbix_password = sys.argv[3]
-proxy_name = sys.argv[4]
+proxy_ip = sys.argv[4]
 
 # 1. Login
 login_payload = {
@@ -34,31 +34,40 @@ if "result" not in login_response:
     sys.exit(2)
 auth_token = login_response["result"]
 
-# 2. Proxy Bilgisi Al
-proxy_payload = {
+# 2. Proxy listesini çek
+proxy_list_payload = {
     "jsonrpc": "2.0",
     "method": "proxy.get",
     "params": {
-        "output": ["proxyid", "host", "lastaccess"],
-        "filter": {"host": [proxy_name]}
+        "output": ["proxyid", "name", "address", "lastaccess"]
     },
     "auth": auth_token,
     "id": 2
 }
-proxy_response = zabbix_api_request(zabbix_url, proxy_payload)
+proxy_response = zabbix_api_request(zabbix_url, proxy_list_payload)
 if "result" not in proxy_response or not proxy_response["result"]:
-    print(f"Proxy '{proxy_name}' bulunamadı veya erişilemedi.")
+    print("Zabbix proxy listesi alınamadı veya boş.")
     sys.exit(3)
 
-proxy_info = proxy_response["result"][0]
+# 3. IP'ye göre proxy'yi bul
+proxy_info = None
+for proxy in proxy_response["result"]:
+    if proxy.get("address") == proxy_ip:
+        proxy_info = proxy
+        break
+
+if not proxy_info:
+    print(f"IP adresi '{proxy_ip}' ile eşleşen proxy bulunamadı.")
+    sys.exit(4)
+
 lastaccess = int(proxy_info.get("lastaccess", 0))
 now = int(time.time())
 diff = now - lastaccess
 
-# 3. Erişilebilirlik Kontrolü (ör: 180 saniye eşik)
+# 4. Erişilebilirlik Kontrolü (ör: 180 saniye eşik)
 if lastaccess > 0 and diff < 180:
-    print(f"Proxy '{proxy_name}' erişilebilir. (Son erişim: {diff} sn önce)")
+    print(f"Proxy (IP: {proxy_ip}, Name: {proxy_info.get('name')}) erişilebilir. (Son erişim: {diff} sn önce)")
     sys.exit(0)
 else:
-    print(f"Proxy '{proxy_name}' erişilemez! (Son erişim: {diff} sn önce)")
-    sys.exit(4) 
+    print(f"Proxy (IP: {proxy_ip}, Name: {proxy_info.get('name')}) erişilemez! (Son erişim: {diff} sn önce)")
+    sys.exit(5) 
