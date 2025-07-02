@@ -3,18 +3,31 @@
   hosts: ansible_worker
   gather_facts: no
   vars:
-    zabbix_url: "http://10.134.16.210/zabbix/api_jsonrpc.php"
-    zabbix_user: "Admin"
-    zabbix_password: "zabbix"
-    proxy_name: "zabbix-demo-proxy-1"
-    proxy_ip: "10.134.16.80"
+    zabbix_url: "{{ zabbix_url }}"
+    zabbix_user: "{{ zabbix_user }}"
+    zabbix_password: "{{ zabbix_password }}"
+    primary_proxy_host: "{{ primary_proxy_host }}"
+    dr_proxy_host: "{{ dr_proxy_host }}"
     check_script_path: "/data/projects/disaster-recovery-proxy-automation/scripts/check_proxy_status.py"
   tasks:
-    - name: Zabbix API ile proxy kontrolü yap
+    - name: Envanterden primary proxy host variable'larını al
+      set_fact:
+        primary_proxy_vars: "{{ hostvars[primary_proxy_host] }}"
+
+    - name: Zabbix API ile primary proxy kontrolü yap
       ansible.builtin.command: >
         python3 {{ check_script_path }}
-        {{ zabbix_url }} {{ zabbix_user }} {{ zabbix_password }} {{ proxy_name }}
+        {{ zabbix_url }} {{ zabbix_user }} {{ zabbix_password }} {{ primary_proxy_host }}
       register: zabbix_check
+      delegate_to: "{{ primary_proxy_vars.ansible_host }}"
+      become: yes
+      become_user: "{{ primary_proxy_vars.ansible_user | default('root') }}"
+      vars:
+        ansible_ssh_user: "{{ primary_proxy_vars.ansible_user | default('root') }}"
+        ansible_ssh_pass: "{{ primary_proxy_vars.ansible_password | default('') }}"
+        ansible_become: "{{ primary_proxy_vars.ansible_become | default(false) }}"
+        ansible_become_method: "{{ primary_proxy_vars.ansible_become_method | default('sudo') }}"
+        ansible_connection: "{{ primary_proxy_vars.ansible_connection | default('ssh') }}"
       ignore_errors: yes
 
     - name: Zabbix API kontrolü başarılıysa sonucu success olarak ayarla
@@ -22,8 +35,8 @@
         proxy_check_result: "success"
       when: zabbix_check.rc == 0
 
-    - name: Zabbix API başarısızsa ping ile proxy kontrolü yap
-      ansible.builtin.command: ping -c 1 {{ proxy_ip }}
+    - name: Zabbix API başarısızsa ping ile primary proxy kontrolü yap
+      ansible.builtin.command: ping -c 1 {{ primary_proxy_vars.ansible_host }}
       register: ping_result
       when: zabbix_check.rc != 0
       ignore_errors: yes
