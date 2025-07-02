@@ -8,7 +8,7 @@
     zabbix_password: "{{ zabbix_password }}"
     primary_proxy_ip: "{{ primary_proxy_ip }}"
     dr_proxy_ip: "{{ dr_proxy_ip }}"
-    check_script_path: "/data/projects/disaster-recovery-proxy-automation/scripts/check_proxy_status.py"
+    check_script_path: "/data/projects/_16__disaster_recovery_proxy_automation/check_proxy_status.py"
   tasks:
     - name: Zabbix API ile primary proxy kontrolü yap (IP ile)
       ansible.builtin.command: >
