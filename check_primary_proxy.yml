@@ -6,10 +6,14 @@
     zabbix_url: "{{ zabbix_url }}"
     zabbix_user: "{{ zabbix_user }}"
     zabbix_password: "{{ zabbix_password }}"
-    primary_proxy_ip: "{{ primary_proxy_ip }}"
-    dr_proxy_ip: "{{ dr_proxy_ip }}"
+    primary_proxy_host: "{{ primary_proxy_host }}"
+    dr_proxy_host: "{{ dr_proxy_host }}"
     check_script_path: "/data/projects/_16__disaster_recovery_proxy_automation/check_proxy_status.py"
   tasks:
+    - name: Primary Proxy IP bilgisini hostvars'tan al
+      set_fact:
+        primary_proxy_ip: "{{ hostvars[primary_proxy_host].ansible_host }}"
+
     - name: Zabbix API ile primary proxy kontrolü yap (IP ile)
       ansible.builtin.command: >
         python3 {{ check_script_path }}
