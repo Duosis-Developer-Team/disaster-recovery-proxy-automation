@@ -13,6 +13,7 @@
     - name: Primary Proxy Zabbix adını hostvars'tan al
       set_fact:
         primary_proxy_zabbix_name: "{{ hostvars[primary_proxy_host].zabbix_name }}"
+        primary_proxy_ip: "{{ hostvars[primary_proxy_host].ansible_host }}"
 
     - name: Zabbix API ile primary proxy kontrolü yap (zabbix_name ile)
       ansible.builtin.command: >
@@ -21,26 +22,20 @@
       register: zabbix_check
       ignore_errors: yes
 
-    - name: Zabbix API kontrolü başarılıysa sonucu success olarak ayarla
-      set_fact:
-        proxy_check_result: "success"
-      when: zabbix_check.rc == 0
-
-    - name: Zabbix API başarısızsa ping ile primary proxy kontrolü yap
-      ansible.builtin.command: ping -c 1 {{ hostvars[primary_proxy_host].ansible_host }}
+    - name: Ping ile primary proxy kontrolü yap
+      ansible.builtin.command: ping -c 1 {{ primary_proxy_ip }}
       register: ping_result
-      when: zabbix_check.rc != 0
       ignore_errors: yes
 
-    - name: Ping başarılıysa sonucu success olarak ayarla
+    - name: Sonucu belirle (herhangi biri başarısızsa failure)
       set_fact:
         proxy_check_result: "success"
-      when: zabbix_check.rc != 0 and ping_result is defined and ping_result.rc == 0
+      when: zabbix_check.rc == 0 and ping_result is defined and ping_result.rc == 0
 
-    - name: Her iki kontrol de başarısızsa sonucu failure olarak ayarla
+    - name: Sonucu failure olarak ayarla (herhangi biri başarısızsa)
       set_fact:
         proxy_check_result: "failure"
-      when: (zabbix_check.rc != 0) and (ping_result is not defined or ping_result.rc != 0)
+      when: proxy_check_result is not defined
 
     - name: Sonucu ekrana yazdır
       debug:

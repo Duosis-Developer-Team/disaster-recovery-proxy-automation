@@ -49,12 +49,7 @@ if "result" not in proxy_response or not proxy_response["result"]:
     print("Zabbix proxy listesi alınamadı veya boş.")
     sys.exit(3)
 
-# 3. Proxy'leri debug için ekrana yaz
-print("DEBUG: Zabbix'ten dönen proxy listesi:")
-for proxy in proxy_response["result"]:
-    print(f"  - name: {proxy.get('name')}, address: {proxy.get('address')}")
-
-# 4. Name'e göre proxy'yi bul
+# 3. Name'e göre proxy'yi bul
 proxy_info = None
 for proxy in proxy_response["result"]:
     if proxy.get("name") == proxy_name:
@@ -69,7 +64,7 @@ lastaccess = int(proxy_info.get("lastaccess", 0))
 now = int(time.time())
 diff = now - lastaccess
 
-# 5. Erişilebilirlik Kontrolü (ör: 180 saniye eşik)
+# 4. Erişilebilirlik Kontrolü (ör: 180 saniye eşik)
 if lastaccess > 0 and diff < 180:
     print(f"Proxy (Name: {proxy_name}, Address: {proxy_info.get('address')}) erişilebilir. (Son erişim: {diff} sn önce)")
     sys.exit(0)
