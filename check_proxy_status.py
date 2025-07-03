@@ -10,13 +10,13 @@ def zabbix_api_request(url, payload):
     return response.json()
 
 if len(sys.argv) < 5:
-    print("Kullanım: python check_proxy_status.py <zabbix_url> <zabbix_user> <zabbix_password> <proxy_ip>")
+    print("Kullanım: python check_proxy_status.py <zabbix_url> <zabbix_user> <zabbix_password> <proxy_name>")
     sys.exit(1)
 
 zabbix_url = sys.argv[1]
 zabbix_user = sys.argv[2]
 zabbix_password = sys.argv[3]
-proxy_ip = sys.argv[4]
+proxy_name = sys.argv[4]
 
 # 1. Login
 login_payload = {
@@ -54,15 +54,15 @@ print("DEBUG: Zabbix'ten dönen proxy listesi:")
 for proxy in proxy_response["result"]:
     print(f"  - name: {proxy.get('name')}, address: {proxy.get('address')}")
 
-# 4. IP'ye göre proxy'yi bul
+# 4. Name'e göre proxy'yi bul
 proxy_info = None
 for proxy in proxy_response["result"]:
-    if proxy.get("address") == proxy_ip:
+    if proxy.get("name") == proxy_name:
         proxy_info = proxy
         break
 
 if not proxy_info:
-    print(f"IP adresi '{proxy_ip}' ile eşleşen proxy bulunamadı.")
+    print(f"Proxy adı '{proxy_name}' ile eşleşen proxy bulunamadı.")
     sys.exit(4)
 
 lastaccess = int(proxy_info.get("lastaccess", 0))
@@ -71,8 +71,8 @@ diff = now - lastaccess
 
 # 5. Erişilebilirlik Kontrolü (ör: 180 saniye eşik)
 if lastaccess > 0 and diff < 180:
-    print(f"Proxy (IP: {proxy_ip}, Name: {proxy_info.get('name')}) erişilebilir. (Son erişim: {diff} sn önce)")
+    print(f"Proxy (Name: {proxy_name}, Address: {proxy_info.get('address')}) erişilebilir. (Son erişim: {diff} sn önce)")
     sys.exit(0)
 else:
-    print(f"Proxy (IP: {proxy_ip}, Name: {proxy_info.get('name')}) erişilemez! (Son erişim: {diff} sn önce)")
+    print(f"Proxy (Name: {proxy_name}, Address: {proxy_info.get('address')}) erişilemez! (Son erişim: {diff} sn önce)")
     sys.exit(5) 
