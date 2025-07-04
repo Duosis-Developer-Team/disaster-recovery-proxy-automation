@@ -39,4 +39,18 @@
 
     - name: Sonucu ekrana yazdır
       debug:
-        msg: "Proxy kontrol sonucu: {{ proxy_check_result }}" 
+        msg: "Proxy kontrol sonucu: {{ proxy_check_result }}"
+
+    - name: DR Proxy'de zabbix-proxy servisini başlat (proxy_check_result failure ise)
+      ansible.builtin.service:
+        name: zabbix-proxy
+        state: started
+      delegate_to: "{{ dr_proxy_host }}"
+      when: proxy_check_result == "failure"
+
+    - name: DR Proxy'de zabbix-proxy servisini durdur (proxy_check_result success ise)
+      ansible.builtin.service:
+        name: zabbix-proxy
+        state: stopped
+      delegate_to: "{{ dr_proxy_host }}"
+      when: proxy_check_result == "success" 
